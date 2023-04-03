@@ -1,6 +1,6 @@
 {
   "name": "nest-mongo-migrate",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A nestjs module to matain mongodb incremental scripts, and run scripts to mongodb",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
