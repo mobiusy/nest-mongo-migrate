@@ -20,6 +20,10 @@
     "nestjs",
     "mongo"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mobiusy/nest-mongo-migrate.git"
+  },
   "author": "Mobiusy <mobiuskaikai@gmail.com>",
   "license": "MIT",
   "dependencies": {
