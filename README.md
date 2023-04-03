@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  A <a href="https://github.com/nestjs/nest">Nest</a> module for manage and run mongodb migration scripts.
+  A <a href="https://github.com/nestjs/nest">Nest</a> module for manage and run mongodb migration scripts. Inspired by <a href="https://www.npmjs.com/package/migrate-mongo"> migrate-mongo </a>
 </p>
 
 
@@ -125,9 +125,8 @@ module.exports = {
   /**
    * upgrade script
    * @param {mongo.Db} db 
-   * @param {mongo.MongoClient} client 
    */
-  async up(db, client) {
+  async up(db) {
     // TODO write your migration here.
     // Example:
     // await db.collection('albums').updateOne({artist: 'The Beatles'}, {$set: {blacklisted: true}});
@@ -136,9 +135,8 @@ module.exports = {
   /**
    * downgrade script
    * @param {mongo.Db} db 
-   * @param {mongo.MongoClient} client 
    */
-  async down(db, client) {
+  async down(db) {
     // TODO write the statements to rollback your migration (if possible)
     // Example:
     // await db.collection('albums').updateOne({artist: 'The Beatles'}, {$set: {blacklisted: false}});
