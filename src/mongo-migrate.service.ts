@@ -3,7 +3,7 @@ import { Db, MongoClient } from 'mongodb';
 import { MongoMigrateOptions } from './dto/mongo-migrate-options.dto';
 import fs from 'fs';
 import path, { resolve } from 'path';
-import { MongoScriptLog } from './dto/script-log.dto';
+import { MongoScriptLog, ScriptLogDto } from './dto/script-log.dto';
 
 @Injectable()
 export class MongoMigrateService {
@@ -15,18 +15,38 @@ export class MongoMigrateService {
 
   ) {}
 
+  /**
+   * Get current db script logs
+   * @returns 
+   */
   async status() {
     const collection = await this.getCollection();
-    const scriptLogs = await collection.find().sort({_id: 1}).toArray();
+    const mongoScriptLogs = await collection.find().sort({_id: 1}).toArray();
+    const scriptLogs: ScriptLogDto[] = [];
+    for (const scriptLog of mongoScriptLogs) {
+      scriptLogs.push({
+        name: scriptLog.name,
+        status: scriptLog.status,
+        scriptContent: scriptLog.scriptContent,
+        timeConsuming: scriptLog.timeConsuming,
+        createdAt: this.formateDate(scriptLog.createdAt, 'YYYY-MM-DD HH:mm:ss'),
+      });
+    }
+
     return scriptLogs;
   }
 
+  /**
+   * Running all script file in `scriptsDir` folder
+   * @returns scripts that runned
+   */
   async up() {
     const db = await this.getDb();
     const collection = db.collection<MongoScriptLog>(this.options.collectionName);
     const scriptLogs = await collection.find().toArray();
     const names = new Set(Array.from(scriptLogs.map(item => item.name)))
     const files = await this.readAllFile();
+    const scripts: string[] = [];
     for (const file of files) {
       if (names.has(file.name)) {
         continue;
@@ -34,25 +54,30 @@ export class MongoMigrateService {
       const module = require(file.path);
       if (typeof module.up === 'function') {
         this.logger.log(`[UP] Run: ${file.name}`);
-        // record time consuming of script in seconds
-        const start = performance.now();
+        // record time consuming of script in milliseconds
+        const start = Date.now();
         await module.up(db);
-        const end = performance.now();
+        const end = Date.now();
         const scriptLog: MongoScriptLog = {
           name: file.name,
           status: 'COMPLETE',
           scriptContent: module.up.toString(),
           timeConsuming: end - start,
           createdAt: new Date(),
-          updatedAt: new Date(),
         };
         await collection.insertOne(scriptLog);
+        scripts.push(file.name);
       }
     }
 
     this.logger.log(`[UP] Finished`);
+    return scripts;
   }
 
+  /**
+   * Downgrade latest scripts in db
+   * @returns scripts that roolbacked
+   */
   async down() {
     const db = await this.getDb();
     const collection = db.collection<MongoScriptLog>(this.options.collectionName);
@@ -60,6 +85,7 @@ export class MongoMigrateService {
     const names = new Set(Array.from(scriptLogs.map(item => item.name)))
     const files = await this.readAllFile();
     files.reverse();
+    const scripts: string[] = [];
     for (const file of files) {
       if (!names.has(file.name)) {
         continue;
@@ -71,11 +97,19 @@ export class MongoMigrateService {
         await collection.deleteOne({name: file.name});
         this.logger.log(`[DOWN] Finished`);
         // roolback one script, then stop
+        scripts.push(file.name);
         break;
       }
     }
+
+    return scripts;
   }
 
+  /**
+   * create a new script file by inner template
+   * @param scriptName name of script, eg: init-admin-user
+   * @returns script file name
+   */
   async create(scriptName: string) {
     const { scriptsDir } = this.options;
     if (!path.isAbsolute(scriptsDir)) {
@@ -83,8 +117,10 @@ export class MongoMigrateService {
     }
     const templatePath = resolve(__dirname, '../template/sample-migration.js');
     const content = fs.readFileSync(templatePath, 'utf-8');
-    const timestamp = this.formateDate();
-    fs.writeFileSync(path.join(scriptsDir, `${timestamp}_${scriptName}.js`), content);
+    const timestamp = this.formateDate(new Date(), 'YYYYMMDDHHmmss');
+    const script = `${timestamp}_${scriptName}.js`;
+    fs.writeFileSync(path.join(scriptsDir, script), content);
+    return script;
   }
 
   private async getDb(): Promise<Db> {
@@ -102,6 +138,10 @@ export class MongoMigrateService {
     return db.collection<MongoScriptLog>(this.options.collectionName);
   }
 
+  /**
+   * 
+   * @returns 
+   */
   private async readAllFile() {
     const { scriptsDir } = this.options;
     // check if scriptsDir is absolute path
@@ -113,8 +153,7 @@ export class MongoMigrateService {
     // Filter files that match the pattern: 'YYYYMMDDHHmmss_*.js'
     const matchedFiles = allFiles.filter((file) => {
       return /^\d{14}_.*\.js$/.test(file);
-    });
-    matchedFiles.sort((a, b) => {
+    }).sort((a, b) => {
       const aTimestamp = parseInt(a.slice(0, 14));
       const bTimestamp = parseInt(b.slice(0, 14));
       return bTimestamp - aTimestamp;
@@ -130,15 +169,21 @@ export class MongoMigrateService {
     return files;
   }
 
-  private formateDate() {
-    // format current date to 'YYYYMMDDHHmmss', e.g. 20210101120000, full fill with 0
-    const date = new Date();
+  // add function to format date by format string
+  private formateDate(date: Date, format: string) {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const hour = date.getHours();
     const minute = date.getMinutes();
     const second = date.getSeconds();
-    return `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}${hour.toString().padStart(2, '0')}${minute.toString().padStart(2, '0')}${second.toString().padStart(2, '0')}`;
+
+    return format
+      .replace('YYYY', year.toString())
+      .replace('MM', month.toString().padStart(2, '0'))
+      .replace('DD', day.toString().padStart(2, '0'))
+      .replace('HH', hour.toString().padStart(2, '0'))
+      .replace('mm', minute.toString().padStart(2, '0'))
+      .replace('ss', second.toString().padStart(2, '0'));
   }
 }
