@@ -1,6 +1,6 @@
 {
   "name": "nest-mongo-migrate",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A nestjs module to matain mongodb incremental scripts, and run scripts to mongodb",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -26,14 +26,18 @@
   },
   "author": "Mobiusy <mobiuskaikai@gmail.com>",
   "license": "MIT",
-  "dependencies": {
-    "@nestjs/common": "^9.3.12",
-    "mongodb": "^5.1.0",
-    "rxjs": "^7.8.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^18.15.11",
-    "rimraf": "^4.4.1",
-    "typescript": "^5.0.2"
+    "@nestjs/common": "9.3.12",
+    "@types/node": "18.15.11",
+    "mongodb": "5.1.0",
+    "rimraf": "4.4.1",
+    "rxjs": "7.8.0",
+    "typescript": "5.0.2"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^8.0.0 || ^9.0.0",
+    "mongodb": "^4.1.3 || ^5.0.0",
+    "rxjs": "^7.0.0"
   }
 }

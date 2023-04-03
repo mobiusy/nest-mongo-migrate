@@ -148,4 +148,3 @@ module.exports = {
 ## TODO
 - Add transaction supoort if db in replica set mode
 - Add cli command supoort
-- Refactor dependency
